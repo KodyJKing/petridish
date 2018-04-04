@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "yarn link brion && yarn install && ion -c",
     "browserwatch": "brion -t template.html ion . -o index.html -w",
-    "watch": "yarn browserwatch & ion -w"
+    "watch": "yarn browserwatch & ion -w",
+    "watchWin": "start yarn browserwatch && ion -w"
   },
   "author": "KJK",
   "license": "MIT",
