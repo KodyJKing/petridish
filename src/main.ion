@@ -2,68 +2,52 @@ const
     {Matter} = import './'
     {Engine, Render, World, Bodies, Mouse, MouseConstraint, Constraint, Events, Composite} = Matter
 
-const
-    createBody(genome) ->
-        console.log('')
 
-    removeBody(world, body) ->
-        Composite.remove(world, body)
-        for constraint in world.constraints
+const
+    createCreature(genome) ->
+        let result = Composite.create()
+
+        for let i = 0; i < 1; i++
+            let circle = Bodies.circle(..)
+                0, 0, 40
+                {}
+                    frictionAir: 0.05
+                    render:
+                        fillStyle: '#bf9661'
+
+            Composite.add(result, circle)
+
+        return result
+
+    removeBody(composite, body) ->
+        Composite.remove(composite, body)
+        for constraint in composite.constraints
             if constraint.bodyA is body or constraint.bodyB is body
-                Composite.remove(world, constraint)
+                Composite.remove(composite, constraint)
 
 export ->
-    let WIDTH = window.innerWidth
-    let HEIGHT = window.innerHeight
-    let HALFWIDTH = WIDTH / 2
-    let HALFHEIGHT = HEIGHT / 2
+    let
+        WIDTH = window.innerWidth
+        HEIGHT = window.innerHeight
+        HALFWIDTH = WIDTH / 2
+        HALFHEIGHT = HEIGHT / 2
 
-    let engine = Engine.create()
-    let world = engine.world
-    let render = Render.create(..)
-        engine: engine
-        element: document.body
-        options:
-            width: WIDTH
-            height: HEIGHT
-            wireframes: false
-            showAngleIndicator: true
-            background: '#e3e7ed'
+        engine = Engine.create()
+        world = engine.world
+        render = Render.create(..)
+            engine: engine
+            element: document.body
+            options:
+                width: WIDTH
+                height: HEIGHT
+                wireframes: false
+                showAngleIndicator: true
+                background: '#e3e7ed'
 
-    window.engine = engine
-    window.world = world
-    window.render = render
-    window.Matter = Matter
+        mouse = Mouse.create(render.canvas)
 
     world.gravity.y = 0
 
-    let boxA = Bodies.circle(..)
-        HALFWIDTH - 100, HALFHEIGHT, 40
-        {}
-            frictionAir: 0.05
-            render:
-                fillStyle: '#bf9661'
-
-    let boxB = Bodies.circle(..)
-        HALFWIDTH + 100, HALFHEIGHT, 40
-        {}
-            frictionAir: 0.05
-            render:
-                fillStyle: '#bf9661'
-
-    window.r = -> removeBody(world, boxA)
-
-    let constraint = Constraint.create(..)
-        bodyA: boxA
-        bodyB: boxB
-        pointA: { x: 40, y: 0 }
-        pointB: { x: -40, y: 0 }
-        stiffness: 0.01
-
-    # add all of the bodies to the world
-    World.add(world, [boxA, boxB, constraint])
-
-    let mouse = Mouse.create(render.canvas)
     World.add(..)
         world, MouseConstraint.create(..)
             engine
@@ -71,6 +55,10 @@ export ->
                 constraint:
                     stiffness: 0.2
                     render: {visible: false}
+
+    let creature = createCreature()
+    Composite.translate(creature, { x: HALFWIDTH, y: HALFHEIGHT })
+    World.add(world, creature)
 
     # run the engine
     Engine.run(engine)
