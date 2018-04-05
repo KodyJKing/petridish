@@ -1,34 +1,12 @@
 const
-    {Matter} = import './'
-    {Engine, Render, World, Bodies, Mouse, MouseConstraint, Constraint, Events, Composite} = Matter
-
-
-const
-    createCreature(genome) ->
-        let result = Composite.create()
-
-        for let i = 0; i < 1; i++
-            let circle = Bodies.circle(..)
-                0, 0, 40
-                {}
-                    frictionAir: 0.05
-                    render:
-                        fillStyle: '#bf9661'
-
-            Composite.add(result, circle)
-
-        return result
-
-    removeBody(composite, body) ->
-        Composite.remove(composite, body)
-        for constraint in composite.constraints
-            if constraint.bodyA is body or constraint.bodyB is body
-                Composite.remove(composite, constraint)
+    {Matter, Creature} = import './'
+    {Engine, Render, World, Bodies, Mouse, MouseConstraint, Composite, Events} = Matter
 
 export ->
     let
-        WIDTH = window.innerWidth
-        HEIGHT = window.innerHeight
+        PADDING = 10
+        WIDTH = window.innerWidth - PADDING * 2
+        HEIGHT = window.innerHeight - PADDING * 2
         HALFWIDTH = WIDTH / 2
         HALFHEIGHT = HEIGHT / 2
 
@@ -42,11 +20,17 @@ export ->
                 height: HEIGHT
                 wireframes: false
                 showAngleIndicator: true
-                background: '#e3e7ed'
+                background: '#e0d0bc'
 
         mouse = Mouse.create(render.canvas)
 
-    world.gravity.y = 0
+    # world.gravity.y = 1
+
+    # run the engine
+    Engine.run(engine)
+
+    # run the renderer
+    Render.run(render)
 
     World.add(..)
         world, MouseConstraint.create(..)
@@ -56,12 +40,29 @@ export ->
                     stiffness: 0.2
                     render: {visible: false}
 
-    let creature = createCreature()
-    Composite.translate(creature, { x: HALFWIDTH, y: HALFHEIGHT })
-    World.add(world, creature)
+    let wallOpt = { isStatic: true, render: { fillStyle: '#a38053' } }
+    World.add(..)
+        world
+        []
+            Bodies.rectangle(..)
+                0,         HALFHEIGHT, 60,    HEIGHT, wallOpt
+            Bodies.rectangle(..)
+                WIDTH,     HALFHEIGHT, 60,    HEIGHT, wallOpt
+            Bodies.rectangle(..)
+                HALFWIDTH, 0,          WIDTH, 60,     wallOpt
+            Bodies.rectangle(..)
+                HALFWIDTH, HEIGHT,     WIDTH, 60,     wallOpt
 
-    # run the engine
-    Engine.run(engine)
+    let creatures = []
+        for let i = 0; i < 20; i++
+            new Creature(world)
 
-    # run the renderer
-    Render.run(render)
+    for creature in creatures
+        Composite.translate(creature.body, { x: WIDTH * Math.random(), y: HEIGHT * Math.random() })
+        creature.add()
+
+    Events.on(..)
+        engine, "afterUpdate"
+        ->
+            for creature in creatures
+                creature.update(0)
