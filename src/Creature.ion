@@ -2,40 +2,37 @@ const
     {Matter} = import './'
     {Engine, World, Body, Bodies, Constraint, Events, Composite} = Matter
 
+#E6E6E6
+#A6E22A
+
 const
-    rootCell() ->
-        let body = Bodies.circle(..)
-            0, 0, 8
-            {}
-                frictionAir: 0.05
+    cellSize = 32
+    frictionAir = 0.05
+
+const
+    createCell(type, x, y) ->
+        let body = Bodies.rectangle(..)
+            x * cellSize, y * cellSize
+            cellSize, cellSize
+            {frictionAir}
                 render:
-                    fillStyle: '#A6E22A'
+                    fillStyle: cellTypes[type].color
         return body
             plugin:
-                updateCell: (dt) ->
-                    Matter.Body.applyForce(body, body.position, {x: 0, y: 0.0001})
-
-# TODO:
-#     - Add creature generation from genome.
-#         - Start with an explicit encoding of cell type, position and connections.
-#         - Enforce bilateral symmetry.
-#         - In deciding which cells should be conntected, add a flag marking a cell as either sticky, neutral or slippery.
-#             - Sticky cells stick to anything near by that isnt slippery.
-#             - Slippery cells allow us to generate more sophisticated mechanical linkages without getting stuck to surrounding cells.
-#         - Add a way to specify connections explicitly.
-#         - Cell types may have different energy requirements to grow.
-#         - Make longer connections cost more energy.
-#     - Implement mutation.
-#         - Make high energy consuming mutations less likely.
-#             - When adding cells to the genome, positions near other cells should be more likely the positions further from other cells.
-#             - When adding explicit connections, shorter connections should be more likely than longer ones.
+                type: type
+    
+    cellTypes = {}
+        r: # root
+            color: '#E6E6E6'
+            updateCell: (body, dt) ->
+                Matter.Body.applyForce(body, body.position, {x: 0, y: 0.0001})          
 
 export class Creature
     constructor: (world) ->
         @world = world
         @body = Composite.create()
         for let i = 0; i < 20; i++
-            let cell = rootCell()
+            let cell = createCell('r', 0, 0)
             Composite.add(@body, cell)
 
     properties:
@@ -45,4 +42,4 @@ export class Creature
             World.remove(@world, @body)
         update: (dt) ->
             for cell in Matter.Composite.allBodies(@body)
-                cell.plugin.updateCell(dt)
+                cellTypes[cell.plugin.type].updateCell(cell, dt)

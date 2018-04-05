@@ -19,7 +19,7 @@ export ->
                 width: WIDTH
                 height: HEIGHT
                 wireframes: false
-                showAngleIndicator: true
+                # showAngleIndicator: true
                 background: '#595959'
 
         mouse = Mouse.create(render.canvas)
@@ -54,7 +54,7 @@ export ->
                 HALFWIDTH, HEIGHT,     WIDTH, 60,     wallOpt
 
     let creatures = []
-        for let i = 0; i < 20; i++
+        for let i = 0; i < 10; i++
             new Creature(world)
 
     for creature in creatures
