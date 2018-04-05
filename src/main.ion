@@ -19,27 +19,23 @@ export ->
                 width: WIDTH
                 height: HEIGHT
                 wireframes: false
-                # showAngleIndicator: true
+                showAngleIndicator: true
                 background: '#595959'
 
         mouse = Mouse.create(render.canvas)
 
-    # world.gravity.y = 1
+    world.gravity.y = 0
 
-    # run the engine
     Engine.run(engine)
-
-    # run the renderer
     Render.run(render)
 
     World.add(..)
         world, MouseConstraint.create(..)
-            engine
-            {mouse}
-                constraint:
-                    stiffness: 0.2
-                    render: {visible: false}
+            engine, {}
+                constraint: { stiffness: 0.1, damping: 0.1, render: {visible: true} }
+                mouse: mouse
 
+    #  Walls
     let wallOpt = { isStatic: true, render: { fillStyle: '#383830' } }
     World.add(..)
         world
@@ -53,16 +49,23 @@ export ->
             Bodies.rectangle(..)
                 HALFWIDTH, HEIGHT,     WIDTH, 60,     wallOpt
 
+    # Creatures
     let creatures = []
-        for let i = 0; i < 10; i++
+        for let i = 0; i < 5; i++
             new Creature(world)
 
     for creature in creatures
         Composite.translate(creature.body, { x: WIDTH * Math.random(), y: HEIGHT * Math.random() })
         creature.add()
 
+    #  Main loop
+    let previousTime = performance.now()
+    let maxDt = 500
     Events.on(..)
         engine, "afterUpdate"
         ->
+            let currentTime = performance.now()
+            let dt = Math.min(currentTime - previousTime, maxDt)
+            previousTime = currentTime
             for creature in creatures
-                creature.update(0)
+                creature.update(dt)

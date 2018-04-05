@@ -2,38 +2,39 @@ const
     {Matter} = import './'
     {Engine, World, Body, Bodies, Constraint, Events, Composite} = Matter
 
-#E6E6E6
-#A6E22A
-
 const
     cellSize = 32
     frictionAir = 0.05
 
-const
-    createCell(type, x, y) ->
-        let body = Bodies.rectangle(..)
+class Cell
+    constructor: (x, y) ->
+        @body = Bodies.rectangle(..)
             x * cellSize, y * cellSize
-            cellSize, cellSize
-            {frictionAir}
-                render:
-                    fillStyle: cellTypes[type].color
-        return body
-            plugin:
-                type: type
-    
-    cellTypes = {}
-        r: # root
-            color: '#E6E6E6'
-            updateCell: (body, dt) ->
-                Matter.Body.applyForce(body, body.position, {x: 0, y: 0.0001})          
+            cellSize, cellSize, {}
+                frictionAir: frictionAir
+                render: { fillStyle: @color }
+        @body.cell = @
+    properties:
+        color: '#E6E6E6'
+        update: (dt) ->
+
+class CellThruster extends Cell
+    properties:
+        color: '#F92672'
+        thrust: 0.00005
+        update: (dt) ->
+            Matter.Body.applyForce(..)
+                @body, @body.position, {}
+                    x: Math.cos(@body.angle) * @thrust * dt
+                    y: Math.sin(@body.angle) * @thrust * dt
 
 export class Creature
     constructor: (world) ->
         @world = world
         @body = Composite.create()
         for let i = 0; i < 20; i++
-            let cell = createCell('r', 0, 0)
-            Composite.add(@body, cell)
+            let cell = Math.random() > 0.5 ? new CellThruster(0, 0) : new Cell(0,0)
+            Composite.add(@body, cell.body)
 
     properties:
         add: ->
@@ -41,5 +42,5 @@ export class Creature
         remove: ->
             World.remove(@world, @body)
         update: (dt) ->
-            for cell in Matter.Composite.allBodies(@body)
-                cellTypes[cell.plugin.type].updateCell(cell, dt)
+            for body in Matter.Composite.allBodies(@body)
+                body.cell.update(dt)
