@@ -9,7 +9,7 @@ const
             {}
                 frictionAir: 0.05
                 render:
-                    fillStyle: '#bf9661'
+                    fillStyle: '#A6E22A'
         return body
             plugin:
                 updateCell: (dt) ->

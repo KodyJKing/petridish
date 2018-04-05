@@ -20,7 +20,7 @@ export ->
                 height: HEIGHT
                 wireframes: false
                 showAngleIndicator: true
-                background: '#e0d0bc'
+                background: '#595959'
 
         mouse = Mouse.create(render.canvas)
 
@@ -40,7 +40,7 @@ export ->
                     stiffness: 0.2
                     render: {visible: false}
 
-    let wallOpt = { isStatic: true, render: { fillStyle: '#a38053' } }
+    let wallOpt = { isStatic: true, render: { fillStyle: '#383830' } }
     World.add(..)
         world
         []
