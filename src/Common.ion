@@ -1,0 +1,38 @@
+export const
+    # Discrete inverse transform sampling:
+    #   1. Pick a uniform random number from 0 to 1 to act as a threshold.
+    #   2. Calculate the cumulative weight (CDF) of the weights.
+    #   3. Stop when the CDF crosses the threshold.
+    #
+    # https://en.wikipedia.org/wiki/Inverse_transform_sampling
+    sample(weights) ->
+        let netWeight = weights.reduce((x, y) -> x + y, 0)
+        let threshold = Math.random() * netWeight
+        let cumulativeWeight = 0
+        for let i = 0; i < weights.length; i++
+            cumulativeWeight += weights[i]
+            if cumulativeWeight >= threshold
+                return i
+
+    # A log-time version of the above for static distributions.
+    # If we precalculate the CDF, we can binary search for the theshold.
+    createSampler(weights) ->
+        let cumulativeWeight = 0
+        let cdf = [cumulativeWeight += weight for weight in weights]
+        let netWeight = cdf[cdf.length - 1]
+
+        return ->
+            let threshold = Math.random() * netWeight
+            let low = 0
+            let high = cdf.length - 1
+            while true
+                let mid = ((low + high) / 2) | 0
+                let prevValue = cdf[mid - 1] ? 0
+                let midValue = cdf[mid]
+                if midValue >= threshold
+                    if prevValue < threshold
+                        return mid
+                    else
+                        high = mid - 1
+                else
+                    low = mid + 1

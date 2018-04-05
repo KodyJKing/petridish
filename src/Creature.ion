@@ -1,32 +1,53 @@
 const
-    {Matter} = import './'
+    {Matter, Common} = import './'
+
     {Engine, World, Body, Bodies, Constraint, Events, Composite} = Matter
+
+    {createSampler} = Common
 
 const
     cellSize = 32
     frictionAir = 0.05
 
 class Cell
+    weight: 1
     constructor: (x, y) ->
         @body = Bodies.rectangle(..)
             x * cellSize, y * cellSize
             cellSize, cellSize, {}
                 frictionAir: frictionAir
-                render: { fillStyle: @color }
+                render: { fillStyle: @@color }
         @body.cell = @
+    color: '#E6E6E6'
     properties:
-        color: '#E6E6E6'
         update: (dt) ->
 
 class CellThruster extends Cell
+    weight: 1
+    color: '#F92672'
+    thrust: 0.00005
     properties:
-        color: '#F92672'
-        thrust: 0.00005
         update: (dt) ->
             Matter.Body.applyForce(..)
                 @body, @body.position, {}
-                    x: Math.cos(@body.angle) * @thrust * dt
-                    y: Math.sin(@body.angle) * @thrust * dt
+                    x: Math.cos(@body.angle) * @@thrust * dt
+                    y: Math.sin(@body.angle) * @@thrust * dt
+
+class Genotype
+    constructor: ->
+        # ["{{x}},{{y}}"]: cellType
+        @cells = {}
+    posString: (pos) -> pos.x + ',' + pos.y
+    properties:
+        set: (pos, type) -> @cells[@@posString(pos)] = type
+        get: (pos) -> @cells[@@posString(pos)]
+
+const
+    cellTypes = [Cell, CellThruster]
+    randomCellType = do ->
+        let weights = cellTypes.map((x) -> x.weight)
+        let sampler = createSampler(weights)
+        return -> cellTypes[sampler()]
 
 export class Creature
     constructor: (world) ->
