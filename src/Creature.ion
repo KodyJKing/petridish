@@ -10,7 +10,7 @@ const
     frictionAir = 0.05
 
 class Cell
-    weight: 1
+    weight: 2
     constructor: (x, y) ->
         @body = Bodies.rectangle(..)
             x * cellSize, y * cellSize
@@ -25,7 +25,7 @@ class Cell
 class CellThruster extends Cell
     weight: 1
     color: '#F92672'
-    thrust: 0.00005
+    thrust: 0.0001
     properties:
         update: (dt) ->
             Matter.Body.applyForce(..)
@@ -35,7 +35,6 @@ class CellThruster extends Cell
 
 class Genotype
     constructor: ->
-        # ["{{x}},{{y}}"]: cellType
         @cells = {}
     posString: (pos) -> pos.x + ',' + pos.y
     properties:
@@ -54,7 +53,8 @@ export class Creature
         @world = world
         @body = Composite.create()
         for let i = 0; i < 20; i++
-            let cell = Math.random() > 0.5 ? new CellThruster(0, 0) : new Cell(0,0)
+            let cellType = randomCellType()
+            let cell = new cellType(0, 0)
             Composite.add(@body, cell.body)
 
     properties:
