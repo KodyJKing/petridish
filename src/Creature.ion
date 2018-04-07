@@ -3,28 +3,42 @@ const
     {Engine, World, Body, Bodies, Constraint, Events, Composite, Vector} = Matter
     {createSampler, randInt, Grid} = Common
 
-const cellSize = 8
+const cellSize = 6
 const frictionAir = 0.05
 const cellSizeSquared = cellSize * cellSize
 const
     cellTypes = []
         class Cell
-            constructor: (x, y) ->
+            constructor: (creature, x, y) ->
+                @creature = creature
                 @body = Bodies.rectangle(..)
                     x * cellSize, y * cellSize
                     cellSize, cellSize, {}
                         render: { fillStyle: @@color }
                 @body.cell = @
-            weight: 5
+                @constraints = []
+            weight: 10
             color: '#F8F8F2'
             properties:
-                update: (dt) ->
+                remove: ->
+                    World.remove(world, @body, true)
+                    for constraint in @constraints
+                        World.remove(world, constraint, true)
+                    @onRemove?()
 
         class CellRoot extends Cell
             weight: 0
             color: '#A6E22E'
+            properties:
+                onRemove: -> @creature.die()
 
-        # class
+        class CellMouth extends Cell
+            weight: 1
+            color: '#F92672'
+            properties:
+                collide: (other) ->
+                    if other.cell and other.cell.creature isnt @creature
+                        other.cell.remove()
 
         class CellThruster extends Cell
             weight: 1
@@ -74,7 +88,7 @@ class Genotype
                     let x = _x
                     let y = sign * _y
 
-                    let cell = new type(x, y)
+                    let cell = new type(creature, x, y)
                     cellInstances.set(x, y, cell)
                     Composite.add(creature.body, cell.body)
 
@@ -86,9 +100,8 @@ class Genotype
                             let yPrime = y + dy
                             let neighbor = cellInstances.get(xPrime, yPrime)
                             if neighbor?
-                                let constraint = Constraint.create(..)
-                                    {}
-                                        bodyA: cell.body, bodyB: neighbor.body
+                                let constraint = creature.constrain(..)
+                                    cell, neighbor, {}
                                         render: { visible: false }
                                         pointA:
                                             x: dx * cellSize * 0.5
@@ -97,27 +110,38 @@ class Genotype
                                             x: dx * cellSize * -0.5
                                             y: dy * cellSize * -0.5
                                 constraint.lengthFactorSquared = dx * dx + dy * dy
-                                Composite.add(..)
-                                    creature.body
-                                    constraint
 
 
 export class Creature
-    constructor: (parent = null) ->
+    constructor: (genotype = null) ->
         @body = Composite.create()
-        if not parent?
-            @genotype = new Genotype()
+        @genotype = genotype ? new Genotype()
         @genotype.build(@)
+        @dead = false
 
     properties:
         add: -> World.add(world, @body)
         remove: -> World.remove(world, @body)
         update: (dt) ->
             for body in Composite.allBodies(@body)
-                body.cell.update(dt)
+                body.cell.update?(dt)
 
             for constraint in Composite.allConstraints(@body)
                 let diff = Vector.sub(constraint.bodyA.position, constraint.bodyB.position)
                 let distSq = Vector.magnitudeSquared(diff)
                 if distSq > cellSizeSquared * constraint.lengthFactorSquared * 1.1
                     Composite.remove(@body, constraint)
+        die: ->
+            console.log('KO')
+            @dead = true
+            for constraint in Composite.allConstraints(@body)
+                Composite.remove(@body, constraint)
+        constrain: (cellA, cellB, options) ->
+            let constraint = Constraint.create(..)
+                Object.assign(..)
+                    { bodyA: cellA.body, bodyB: cellB.body }
+                    options
+            cellA.constraints.push(constraint)
+            cellB.constraints.push(constraint)
+            Composite.add(@body, constraint)
+            return constraint
