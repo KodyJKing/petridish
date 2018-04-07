@@ -1,7 +1,8 @@
 const
+    ion = import 'ion'
     {Matter, Common} = import './'
     {Engine, World, Body, Bodies, Constraint, Events, Composite, Vector} = Matter
-    {createSampler, randInt, Grid} = Common
+    {createSampler, random, randInt, Grid} = Common
 
 const cellSize = 6
 const frictionAir = 0.05
@@ -16,10 +17,13 @@ const
                     cellSize, cellSize, {}
                         render: { fillStyle: @@color }
                 @body.cell = @
+                Body.setDensity(@body, @@densityFactor * 0.001)
                 @constraints = []
-            weight: 10
+            weight: 5
             color: '#F8F8F2'
+            densityFactor: 1
             properties:
+                edible: true
                 remove: ->
                     World.remove(world, @body, true)
                     for constraint in @constraints
@@ -28,17 +32,36 @@ const
 
         class CellRoot extends Cell
             weight: 0
-            color: '#A6E22E'
+            color: '#FFE792'
             properties:
                 onRemove: -> @creature.die()
 
         class CellMouth extends Cell
             weight: 1
             color: '#F92672'
+            densityFactor: 2
             properties:
                 collide: (other) ->
-                    if other.cell and other.cell.creature isnt @creature
-                        other.cell.remove()
+                    let otherCell = other.cell
+                    if otherCell? and otherCell.creature isnt @creature and otherCell.edible
+                        otherCell.remove()
+                        @creature.energy++
+
+        class CellPhotosynthesis extends Cell
+            weight: 1
+            color: '#A6E22E'
+            densityFactor: 5
+            energyGainRate: 0.00004
+            properties:
+                update: (dt) ->
+                    @creature.energy += @@energyGainRate * dt
+
+        class CellArmor extends Cell
+            weight: 2
+            color: '#AE81FF'
+            densityFactor: 4
+            properties:
+                edible: false
 
         class CellThruster extends Cell
             weight: 1
@@ -55,14 +78,16 @@ const
     randomCellType = do ->
         let weights = cellTypes.map((x) -> x.weight)
         let sampler = createSampler(weights)
-        return -> cellTypes[sampler()]
+        return -> cellTypes[sampler()].name
 
-class Genotype
+    cellNamespace = do -> {}
+        for type in cellTypes
+            [type.name]: type
+
+class Genome
+    serializable: true
     constructor: ->
         @cells = new Grid()
-        @cells.set(0, 0, CellRoot)
-        for let i = 0; i < 20; i++
-            @mutate()
     properties:
         mutate: ->
             #  Ew, an O(n) op when we only use O(1) of the results!
@@ -79,7 +104,7 @@ class Genotype
         build: (creature) ->
             let cellInstances = new Grid()
             for [_x, _y] in @cells.keys()
-                let type = @cells.get(_x, _y)
+                let type = cellNamespace[@cells.get(_x, _y)]
 
                 for sign in [1, -1]
                     if _y is 0 and sign is -1
@@ -111,16 +136,28 @@ class Genotype
                                             y: dy * cellSize * -0.5
                                 constraint.lengthFactorSquared = dx * dx + dy * dy
 
-
 export class Creature
-    constructor: (genotype = null) ->
+    constructor: (genome = null) ->
         @body = Composite.create()
-        @genotype = genotype ? new Genotype()
-        @genotype.build(@)
+        if genome?
+            @genome = genome
+        else
+            @genome = new Genome()
+            @genome.cells.set(0, 0, 'CellRoot')
+            for let i = 0; i < 20; i++
+                @genome.mutate()
+        @genome.build(@)
         @dead = false
-
+        @energy = 10
+    energyLossRate: 0.0002
     properties:
-        add: -> World.add(world, @body)
+        add: ->
+            let padding = 100
+            let x = random(padding, WIDTH - padding)
+            let y = random(padding, HEIGHT - padding)
+            Composite.rotate(@body, random(0, Math.PI * 2), {x: 0, y:0})
+            Composite.translate(@body, {x,y})
+            World.add(world, @body)
         remove: -> World.remove(world, @body)
         update: (dt) ->
             for body in Composite.allBodies(@body)
@@ -129,13 +166,29 @@ export class Creature
             for constraint in Composite.allConstraints(@body)
                 let diff = Vector.sub(constraint.bodyA.position, constraint.bodyB.position)
                 let distSq = Vector.magnitudeSquared(diff)
-                if distSq > cellSizeSquared * constraint.lengthFactorSquared * 1.1
+                if distSq > cellSizeSquared * constraint.lengthFactorSquared * 1.3
                     Composite.remove(@body, constraint)
+
+            @energy -= dt * @@energyLossRate
+            if @energy <= 0
+                console.log('STARVED')
+                @die()
+            else if @energy >= 20 and creatures.length < maxCreatures
+                @reproduce()
         die: ->
-            console.log('KO')
             @dead = true
             for constraint in Composite.allConstraints(@body)
                 Composite.remove(@body, constraint)
+            for body in Composite.allBodies(@body)
+                if body.cell.constructor isnt Cell
+                    Composite.remove(@body, body)
+        reproduce: ->
+            @energy -= 10
+            let childGenome = ion.deserialize(ion.serialize(@genome), {Genome, Grid})
+            childGenome.mutate()
+            let child = new Creature(childGenome)
+            creatures.push(child)
+            child.add()
         constrain: (cellA, cellB, options) ->
             let constraint = Constraint.create(..)
                 Object.assign(..)

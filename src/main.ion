@@ -5,7 +5,7 @@ const
 
 export ->
     let
-        PADDING = 10
+        PADDING = 0
         WIDTH = window.innerWidth - PADDING * 2
         HEIGHT = window.innerHeight - PADDING * 2
         HALFWIDTH = WIDTH / 2
@@ -28,6 +28,8 @@ export ->
 
     window.engine = engine
     window.world = world
+    window.WIDTH = WIDTH
+    window.HEIGHT = HEIGHT
 
     engine.broadphase.bucketHeight = 20
     engine.broadphase.bucketWidth = 20
@@ -66,25 +68,19 @@ export ->
         engine, "collisionStart"
         (e) ->
             for pair in e.pairs
-                if Math.random() < 0.5
-                    pair.bodyA.cell?.collide?(pair.bodyB)
-                    pair.bodyB.cell?.collide?(pair.bodyA)
-                else
-                    pair.bodyB.cell?.collide?(pair.bodyA)
-                    pair.bodyA.cell?.collide?(pair.bodyB)
+                # if Math.random() < 0.5
+                pair.bodyA.cell?.collide?(pair.bodyB)
+                pair.bodyB.cell?.collide?(pair.bodyA)
+                # else
+                #     pair.bodyB.cell?.collide?(pair.bodyA)
+                #     pair.bodyA.cell?.collide?(pair.bodyB)
 
     # Creatures
-    let creatureCount = 30
-    let creatures = []
-        for let i = 0; i < creatureCount; i++
-            new Creature()
-
-    let padding = 100
-    for creature in creatures
-        let x = random(padding, WIDTH - padding)
-        let y = random(padding, HEIGHT - padding)
-        Composite.rotate(creature.body, random(0, Math.PI * 2), {x: 0, y:0})
-        Composite.translate(creature.body, {x,y})
+    window.maxCreatures = 50
+    window.creatures = []
+    for let i = 0; i < maxCreatures; i++
+        let creature = new Creature()
+        creatures.push(creature)
         creature.add()
 
     #  Main loop

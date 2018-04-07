@@ -41,11 +41,12 @@ export const
     randInt(min, max) -> Math.floor(random(min, max))
 
     Grid = class Grid
+        serializable: true
         constructor: ->
             @values = {}
         properties:
-            get: (x, y) -> @values[x + ',' + y]
-            set: (x, y, v) -> @values[x + ',' + y] = v
-            delete: (x, y) -> delete @values[x + ',' + y]
+            get: (x, y) -> @values[x + '_' + y]
+            set: (x, y, v) -> @values[x + '_' + y] = v
+            delete: (x, y) -> delete @values[x + '_' + y]
             keys: -> Object.keys(@values).map(..)
-                (x) -> x.split(',').map((x) -> parseInt(x))
+                (x) -> x.split('_').map((x) -> parseInt(x))
