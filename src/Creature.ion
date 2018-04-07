@@ -1,67 +1,123 @@
 const
     {Matter, Common} = import './'
+    {Engine, World, Body, Bodies, Constraint, Events, Composite, Vector} = Matter
+    {createSampler, randInt, Grid} = Common
 
-    {Engine, World, Body, Bodies, Constraint, Events, Composite} = Matter
-
-    {createSampler} = Common
-
+const cellSize = 8
+const frictionAir = 0.05
+const cellSizeSquared = cellSize * cellSize
 const
-    cellSize = 32
-    frictionAir = 0.05
+    cellTypes = []
+        class Cell
+            constructor: (x, y) ->
+                @body = Bodies.rectangle(..)
+                    x * cellSize, y * cellSize
+                    cellSize, cellSize, {}
+                        render: { fillStyle: @@color }
+                @body.cell = @
+            weight: 5
+            color: '#F8F8F2'
+            properties:
+                update: (dt) ->
 
-class Cell
-    weight: 2
-    constructor: (x, y) ->
-        @body = Bodies.rectangle(..)
-            x * cellSize, y * cellSize
-            cellSize, cellSize, {}
-                frictionAir: frictionAir
-                render: { fillStyle: @@color }
-        @body.cell = @
-    color: '#E6E6E6'
-    properties:
-        update: (dt) ->
+        class CellRoot extends Cell
+            weight: 0
+            color: '#A6E22E'
 
-class CellThruster extends Cell
-    weight: 1
-    color: '#F92672'
-    thrust: 0.0001
-    properties:
-        update: (dt) ->
-            Matter.Body.applyForce(..)
-                @body, @body.position, {}
-                    x: Math.cos(@body.angle) * @@thrust * dt
-                    y: Math.sin(@body.angle) * @@thrust * dt
+        # class
 
-class Genotype
-    constructor: ->
-        @cells = {}
-    posString: (pos) -> pos.x + ',' + pos.y
-    properties:
-        set: (pos, type) -> @cells[@@posString(pos)] = type
-        get: (pos) -> @cells[@@posString(pos)]
+        class CellThruster extends Cell
+            weight: 1
+            color: '#FD971F'
+            thrust: 0.0000001
+            properties:
+                update: (dt) ->
+                    let force = dt * @@thrust * cellSizeSquared
+                    Matter.Body.applyForce(..)
+                        @body, @body.position, {}
+                            x: Math.cos(@body.angle) * force
+                            y: Math.sin(@body.angle) * force
 
-const
-    cellTypes = [Cell, CellThruster]
     randomCellType = do ->
         let weights = cellTypes.map((x) -> x.weight)
         let sampler = createSampler(weights)
         return -> cellTypes[sampler()]
 
-export class Creature
-    constructor: (world) ->
-        @world = world
-        @body = Composite.create()
+class Genotype
+    constructor: ->
+        @cells = new Grid()
+        @cells.set(0, 0, CellRoot)
         for let i = 0; i < 20; i++
-            let cellType = randomCellType()
-            let cell = new cellType(0, 0)
-            Composite.add(@body, cell.body)
+            @mutate()
+    properties:
+        mutate: ->
+            #  Ew, an O(n) op when we only use O(1) of the results!
+            let positions = @cells.keys()
+            let index = randInt(0, positions.length)
+            let [x, y] = positions[index]
+            while true
+                let xPrime = x + randInt(-1, 2)
+                let yPrime = y + randInt(-1, 2)
+                if yPrime < 0 or xPrime is 0 and yPrime is 0
+                    continue
+                @cells.set(xPrime, yPrime, randomCellType())
+                return
+        build: (creature) ->
+            let cellInstances = new Grid()
+            for [_x, _y] in @cells.keys()
+                let type = @cells.get(_x, _y)
+
+                for sign in [1, -1]
+                    if _y is 0 and sign is -1
+                        continue
+
+                    let x = _x
+                    let y = sign * _y
+
+                    let cell = new type(x, y)
+                    cellInstances.set(x, y, cell)
+                    Composite.add(creature.body, cell.body)
+
+                    for let dx = -1; dx < 2; dx++
+                        for let dy = -1; dy < 2; dy++
+                            if dx is 0 and dy is 0
+                                continue
+                            let xPrime = x + dx
+                            let yPrime = y + dy
+                            let neighbor = cellInstances.get(xPrime, yPrime)
+                            if neighbor?
+                                let constraint = Constraint.create(..)
+                                    {}
+                                        bodyA: cell.body, bodyB: neighbor.body
+                                        render: { visible: false }
+                                        pointA:
+                                            x: dx * cellSize * 0.5
+                                            y: dy * cellSize * 0.5
+                                        pointB:
+                                            x: dx * cellSize * -0.5
+                                            y: dy * cellSize * -0.5
+                                constraint.lengthFactorSquared = dx * dx + dy * dy
+                                Composite.add(..)
+                                    creature.body
+                                    constraint
+
+
+export class Creature
+    constructor: (parent = null) ->
+        @body = Composite.create()
+        if not parent?
+            @genotype = new Genotype()
+        @genotype.build(@)
 
     properties:
-        add: ->
-            World.add(@world, @body)
-        remove: ->
-            World.remove(@world, @body)
+        add: -> World.add(world, @body)
+        remove: -> World.remove(world, @body)
         update: (dt) ->
-            for body in Matter.Composite.allBodies(@body)
+            for body in Composite.allBodies(@body)
                 body.cell.update(dt)
+
+            for constraint in Composite.allConstraints(@body)
+                let diff = Vector.sub(constraint.bodyA.position, constraint.bodyB.position)
+                let distSq = Vector.magnitudeSquared(diff)
+                if distSq > cellSizeSquared * constraint.lengthFactorSquared * 1.1
+                    Composite.remove(@body, constraint)

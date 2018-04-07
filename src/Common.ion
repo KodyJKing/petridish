@@ -36,3 +36,16 @@ export const
                         high = mid - 1
                 else
                     low = mid + 1
+
+    random(min, max) -> min + (max - min) * Math.random()
+    randInt(min, max) -> Math.floor(random(min, max))
+
+    Grid = class Grid
+        constructor: ->
+            @values = {}
+        properties:
+            get: (x, y) -> @values[x + ',' + y]
+            set: (x, y, v) -> @values[x + ',' + y] = v
+            delete: (x, y) -> delete @values[x + ',' + y]
+            keys: -> Object.keys(@values).map(..)
+                (x) -> x.split(',').map((x) -> parseInt(x))

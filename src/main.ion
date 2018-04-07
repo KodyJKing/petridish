@@ -1,6 +1,7 @@
 const
-    {Matter, Creature} = import './'
+    {Matter, Creature, Common} = import './'
     {Engine, Render, World, Bodies, Mouse, MouseConstraint, Composite, Events} = Matter
+    {random} = Common
 
 export ->
     let
@@ -19,10 +20,17 @@ export ->
                 width: WIDTH
                 height: HEIGHT
                 wireframes: false
-                showAngleIndicator: true
-                background: '#595959'
+                # showAngleIndicator: true
+                # showBroadphase: true
+                background: '#272822'
 
         mouse = Mouse.create(render.canvas)
+
+    window.engine = engine
+    window.world = world
+
+    engine.broadphase.bucketHeight = 20
+    engine.broadphase.bucketWidth = 20
 
     world.gravity.y = 0
 
@@ -32,8 +40,11 @@ export ->
     World.add(..)
         world, MouseConstraint.create(..)
             engine, {}
-                constraint: { stiffness: 0.1, damping: 0.1, render: {visible: true} }
                 mouse: mouse
+                constraint:
+                    render: {visible: false}
+                    stiffness: 0.05
+                    damping: 0.1
 
     #  Walls
     let wallOpt = { isStatic: true, render: { fillStyle: '#383830' } }
@@ -50,12 +61,16 @@ export ->
                 HALFWIDTH, HEIGHT,     WIDTH, 60,     wallOpt
 
     # Creatures
+    let creatureCount = 10
     let creatures = []
-        for let i = 0; i < 5; i++
-            new Creature(world)
+        for let i = 0; i < creatureCount; i++
+            new Creature()
 
+    let padding = 100
     for creature in creatures
-        Composite.translate(creature.body, { x: WIDTH * Math.random(), y: HEIGHT * Math.random() })
+        let x = random(padding, WIDTH - padding)
+        let y = random(padding, HEIGHT - padding)
+        Composite.translate(creature.body, {x,y})
         creature.add()
 
     #  Main loop
