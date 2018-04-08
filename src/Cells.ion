@@ -1,0 +1,80 @@
+const
+    {Matter, Common} = import './'
+    {World, Body, Bodies, Events, Composite, Vector} = Matter
+    {createSampler} = Common
+
+export const
+    Cell = class Cell
+        constructor: (creature, x, y) ->
+            @creature = creature
+            @body = Bodies.rectangle(..)
+                x * cellSize, y * cellSize
+                cellSize, cellSize, {}
+                    render: { fillStyle: @@color }
+            @body.cell = @
+            Body.setDensity(@body, @@densityFactor * 0.001)
+            @constraints = []
+        weight: 5
+        color: '#F8F8F2'
+        densityFactor: 1
+        properties:
+            edible: true
+            remove: ->
+                World.remove(world, @body, true)
+                for constraint in @constraints
+                    World.remove(world, constraint, true)
+                @onRemove?()
+
+    CellRoot = class CellRoot extends Cell
+        weight: 0
+        color: '#FFE792'
+        properties:
+            onRemove: -> @creature.die()
+
+    CellMouth = class CellMouth extends Cell
+        weight: 1
+        color: '#F92672'
+        densityFactor: 2
+        properties:
+            collide: (other) ->
+                let otherCell = other.cell
+                if otherCell? and otherCell.creature isnt @creature and otherCell.edible
+                    otherCell.remove()
+                    @creature.energy += 5
+
+    CellPhotosynthesis = class CellPhotosynthesis extends Cell
+        weight: 1
+        color: '#A6E22E'
+        densityFactor: 5
+        energyGainRate: 0.00015
+        properties:
+            update: (dt) ->
+                @creature.energy += @@energyGainRate * dt
+
+    CellArmor = class CellArmor extends Cell
+        weight: 2
+        color: '#AE81FF'
+        densityFactor: 4
+        properties:
+            edible: false
+
+    CellThruster = class CellThruster extends Cell
+        weight: 1
+        color: '#FD971F'
+        thrust: 0.0000001
+        properties:
+            update: (dt) ->
+                let force = dt * @@thrust * cellSizeSquared
+                Body.applyForce(..)
+                    @body, @body.position, {}
+                        x: Math.cos(@body.angle) * force
+                        y: Math.sin(@body.angle) * force
+
+    # randomCellType = do ->
+    #     let weights = cellTypes.map((x) -> x.weight)
+    #     let sampler = createSampler(weights)
+    #     return -> cellTypes[sampler()].name
+
+    # cellNamespace = do -> {}
+    #     for type in cellTypes
+    #         [type.name]: type

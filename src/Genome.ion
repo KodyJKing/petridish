@@ -1,0 +1,62 @@
+const
+    {Matter, Cells, Common} = import './'
+    {Composite} = Matter
+    {createSampler, random} = Common
+
+const
+    randomCellType = do ->
+        let weights = Object.values(Cells).map((x) -> x.weight)
+        let sampler = createSampler(weights)
+        return -> cellTypes[sampler()].name
+
+export class Genome
+    serializable: true
+    constructor: ->
+        @cells = new Grid()
+    properties:
+        mutate: ->
+            #  Ew, an O(n) op when we only use O(1) of the results!
+            let positions = @cells.keys()
+            let index = randInt(0, positions.length)
+            let [x, y] = positions[index]
+            while true
+                let xPrime = x + randInt(-1, 2)
+                let yPrime = y + randInt(-1, 2)
+                if yPrime < 0 or xPrime is 0 and yPrime is 0
+                    continue
+                @cells.set(xPrime, yPrime, randomCellType())
+                return
+        build: (creature) ->
+            let cellInstances = new Grid()
+            for [_x, _y] in @cells.keys()
+                let type = cellNamespace[@cells.get(_x, _y)]
+
+                for sign in [1, -1]
+                    if _y is 0 and sign is -1
+                        continue
+
+                    let x = _x
+                    let y = sign * _y
+
+                    let cell = new type(creature, x, y)
+                    cellInstances.set(x, y, cell)
+                    Composite.add(creature.body, cell.body)
+
+                    for let dx = -1; dx < 2; dx++
+                        for let dy = -1; dy < 2; dy++
+                            if dx is 0 and dy is 0
+                                continue
+                            let xPrime = x + dx
+                            let yPrime = y + dy
+                            let neighbor = cellInstances.get(xPrime, yPrime)
+                            if neighbor?
+                                let constraint = creature.constrain(..)
+                                    cell, neighbor, {}
+                                        render: { visible: false }
+                                        pointA:
+                                            x: dx * cellSize * 0.5
+                                            y: dy * cellSize * 0.5
+                                        pointB:
+                                            x: dx * cellSize * -0.5
+                                            y: dy * cellSize * -0.5
+                                constraint.lengthFactorSquared = dx * dx + dy * dy
