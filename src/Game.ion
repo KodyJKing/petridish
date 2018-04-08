@@ -49,11 +49,11 @@ export class Game
                 @world
                 []
                     Bodies.rectangle(..)
-                        0,         @HEIGHT / 2, 60,    @HEIGHT, wallOpt
+                        0,          @HEIGHT / 2, 60,     @HEIGHT, wallOpt
                     Bodies.rectangle(..)
-                        @WIDTH,     @HEIGHT / 2, 60,    @HEIGHT, wallOpt
+                        @WIDTH,     @HEIGHT / 2, 60,     @HEIGHT, wallOpt
                     Bodies.rectangle(..)
-                        @WIDTH / 2, 0,          @WIDTH, 60,     wallOpt
+                        @WIDTH / 2, 0,           @WIDTH, 60,     wallOpt
                     Bodies.rectangle(..)
                         @WIDTH / 2, @HEIGHT,     @WIDTH, 60,     wallOpt
 
