@@ -1,0 +1,95 @@
+const
+    {Matter, Creature, Common} = import './'
+    {Engine, Render, World, Bodies, Mouse, MouseConstraint, Composite, Events} = Matter
+    {random} = Common
+
+export class Game
+    properties:
+        run: ->
+            @WIDTH = window.innerWidth
+            @HEIGHT = window.innerHeight
+
+            @engine = Engine.create()
+            @world = @engine.world
+            @render = Render.create(..)
+                engine: @engine
+                element: document.body
+                options:
+                    width: @WIDTH
+                    height: @HEIGHT
+                    wireframes: false
+                    # showAngleIndicator: true
+                    # showBroadphase: true
+                    background: '#272822'
+
+            # Configs:
+            @engine.broadphase.bucketHeight = 20
+            @engine.broadphase.bucketWidth = 20
+            @world.gravity.y = 0
+            @cellSize = 8
+            @cellSizeSquared = @cellSize * @cellSize
+            @maxCreatures = 50
+
+            Engine.run(@engine)
+            Render.run(@render)
+
+            @mouse = Mouse.create(@render.canvas)
+            World.add(..)
+                @world, MouseConstraint.create(..)
+                    @engine, {}
+                        mouse: @mouse
+                        constraint:
+                            render: {visible: false}
+                            stiffness: 0.05
+                            damping: 0.1
+
+            #  Walls
+            let wallOpt = { isStatic: true, render: { fillStyle: '#383830' } }
+            World.add(..)
+                @world
+                []
+                    Bodies.rectangle(..)
+                        0,         @HEIGHT / 2, 60,    @HEIGHT, wallOpt
+                    Bodies.rectangle(..)
+                        @WIDTH,     @HEIGHT / 2, 60,    @HEIGHT, wallOpt
+                    Bodies.rectangle(..)
+                        @WIDTH / 2, 0,          @WIDTH, 60,     wallOpt
+                    Bodies.rectangle(..)
+                        @WIDTH / 2, @HEIGHT,     @WIDTH, 60,     wallOpt
+
+
+            # Notify cells of collisions
+            Events.on(..)
+                @engine, "collisionStart"
+                (e) ->
+                    for pair in e.pairs
+                        pair.bodyA.cell?.collide?(pair.bodyB)
+                        pair.bodyB.cell?.collide?(pair.bodyA)
+
+            # Creatures
+            @creatures = []
+            for let i = 0; i < @maxCreatures; i++
+                let creature = new Creature()
+                @creatures.push(creature)
+                creature.add()
+
+            #  Main loop
+            let previousTime = performance.now()
+            let maxDt = 500
+            Events.on(..)
+               @engine, "afterUpdate"
+               =>
+                    let currentTime = performance.now()
+                    let dt = Math.min(currentTime - previousTime, maxDt)
+                    previousTime = currentTime
+
+                    let dead = []
+
+                    for creature in @creatures
+                        if creature.dead
+                            dead.push(creature)
+                        else
+                            creature.update(dt)
+
+                    for creature in dead
+                        @creatures.remove(creature)

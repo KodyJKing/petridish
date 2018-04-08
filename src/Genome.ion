@@ -1,21 +1,23 @@
 const
     {Matter, Cells, Common} = import './'
     {Composite} = Matter
-    {createSampler, random} = Common
+    {createSampler, randInt, Grid} = Common
 
 const
     randomCellType = do ->
-        let weights = Object.values(Cells).map((x) -> x.weight)
+        let cellTypes = Object.values(Cells)
+        let weights = cellTypes.map((x) -> x.weight)
         let sampler = createSampler(weights)
-        return -> cellTypes[sampler()].name
+        return -> cellTypes[sampler()]
 
 export class Genome
     serializable: true
     constructor: ->
         @cells = new Grid()
     properties:
+        setCell: (x, y, type) -> @cells.set(x, y, typeof type is 'string' ? type : type.name)
+        getCell: (x, y) ->  Cells[@cells.get(x, y)]
         mutate: ->
-            #  Ew, an O(n) op when we only use O(1) of the results!
             let positions = @cells.keys()
             let index = randInt(0, positions.length)
             let [x, y] = positions[index]
@@ -24,12 +26,12 @@ export class Genome
                 let yPrime = y + randInt(-1, 2)
                 if yPrime < 0 or xPrime is 0 and yPrime is 0
                     continue
-                @cells.set(xPrime, yPrime, randomCellType())
+                @setCell(xPrime, yPrime, randomCellType())
                 return
         build: (creature) ->
             let cellInstances = new Grid()
             for [_x, _y] in @cells.keys()
-                let type = cellNamespace[@cells.get(_x, _y)]
+                let type = Cells[@cells.get(_x, _y)]
 
                 for sign in [1, -1]
                     if _y is 0 and sign is -1
@@ -54,9 +56,9 @@ export class Genome
                                     cell, neighbor, {}
                                         render: { visible: false }
                                         pointA:
-                                            x: dx * cellSize * 0.5
-                                            y: dy * cellSize * 0.5
+                                            x: dx * game.cellSize * 0.5
+                                            y: dy * game.cellSize * 0.5
                                         pointB:
-                                            x: dx * cellSize * -0.5
-                                            y: dy * cellSize * -0.5
+                                            x: dx * game.cellSize * -0.5
+                                            y: dy * game.cellSize * -0.5
                                 constraint.lengthFactorSquared = dx * dx + dy * dy

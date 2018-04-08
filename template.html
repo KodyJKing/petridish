@@ -10,8 +10,10 @@
     <script type='ion'>
             const
                 petridish = import 'petridish'
-                {main} = petridish
-            main()
+                {Game} = petridish
+            let game = new Game()
+            window.game = game
+            game.run()
         </script>
 </body>
 

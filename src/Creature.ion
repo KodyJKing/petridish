@@ -1,140 +1,8 @@
 const
     ion = import 'ion'
-    {Matter, Common} = import './'
+    {Matter, Common, Genome, Cells} = import './'
     {Engine, World, Body, Bodies, Constraint, Events, Composite, Vector} = Matter
     {createSampler, random, randInt, clamp, Grid} = Common
-
-const cellSize = 8
-const frictionAir = 0.05
-const cellSizeSquared = cellSize * cellSize
-const
-    cellTypes = []
-        class Cell
-            constructor: (creature, x, y) ->
-                @creature = creature
-                @body = Bodies.rectangle(..)
-                    x * cellSize, y * cellSize
-                    cellSize, cellSize, {}
-                        render: { fillStyle: @@color }
-                @body.cell = @
-                Body.setDensity(@body, @@densityFactor * 0.001)
-                @constraints = []
-            weight: 5
-            color: '#F8F8F2'
-            densityFactor: 1
-            properties:
-                edible: true
-                remove: ->
-                    World.remove(world, @body, true)
-                    for constraint in @constraints
-                        World.remove(world, constraint, true)
-                    @onRemove?()
-
-        class CellRoot extends Cell
-            weight: 0
-            color: '#FFE792'
-            properties:
-                onRemove: -> @creature.die()
-
-        class CellMouth extends Cell
-            weight: 1
-            color: '#F92672'
-            densityFactor: 2
-            properties:
-                collide: (other) ->
-                    let otherCell = other.cell
-                    if otherCell? and otherCell.creature isnt @creature and otherCell.edible
-                        otherCell.remove()
-                        @creature.energy += 5
-
-        class CellPhotosynthesis extends Cell
-            weight: 1
-            color: '#A6E22E'
-            densityFactor: 5
-            energyGainRate: 0.00015
-            properties:
-                update: (dt) ->
-                    @creature.energy += @@energyGainRate * dt
-
-        class CellArmor extends Cell
-            weight: 2
-            color: '#AE81FF'
-            densityFactor: 4
-            properties:
-                edible: false
-
-        class CellThruster extends Cell
-            weight: 1
-            color: '#FD971F'
-            thrust: 0.0000001
-            properties:
-                update: (dt) ->
-                    let force = dt * @@thrust * cellSizeSquared
-                    Matter.Body.applyForce(..)
-                        @body, @body.position, {}
-                            x: Math.cos(@body.angle) * force
-                            y: Math.sin(@body.angle) * force
-
-    randomCellType = do ->
-        let weights = cellTypes.map((x) -> x.weight)
-        let sampler = createSampler(weights)
-        return -> cellTypes[sampler()].name
-
-    cells = do -> {}
-        for type in cellTypes
-            [type.name]: type
-
-class Genome
-    serializable: true
-    constructor: ->
-        @cells = new Grid()
-    properties:
-        mutate: ->
-            #  Ew, an O(n) op when we only use O(1) of the results!
-            let positions = @cells.keys()
-            let index = randInt(0, positions.length)
-            let [x, y] = positions[index]
-            while true
-                let xPrime = x + randInt(-1, 2)
-                let yPrime = y + randInt(-1, 2)
-                if yPrime < 0 or xPrime is 0 and yPrime is 0
-                    continue
-                @cells.set(xPrime, yPrime, randomCellType())
-                return
-        build: (creature) ->
-            let cellInstances = new Grid()
-            for [_x, _y] in @cells.keys()
-                let type = cells[@cells.get(_x, _y)]
-
-                for sign in [1, -1]
-                    if _y is 0 and sign is -1
-                        continue
-
-                    let x = _x
-                    let y = sign * _y
-
-                    let cell = new type(creature, x, y)
-                    cellInstances.set(x, y, cell)
-                    Composite.add(creature.body, cell.body)
-
-                    for let dx = -1; dx < 2; dx++
-                        for let dy = -1; dy < 2; dy++
-                            if dx is 0 and dy is 0
-                                continue
-                            let xPrime = x + dx
-                            let yPrime = y + dy
-                            let neighbor = cellInstances.get(xPrime, yPrime)
-                            if neighbor?
-                                let constraint = creature.constrain(..)
-                                    cell, neighbor, {}
-                                        render: { visible: false }
-                                        pointA:
-                                            x: dx * cellSize * 0.5
-                                            y: dy * cellSize * 0.5
-                                        pointB:
-                                            x: dx * cellSize * -0.5
-                                            y: dy * cellSize * -0.5
-                                constraint.lengthFactorSquared = dx * dx + dy * dy
 
 export class Creature
     constructor: (genome = null) ->
@@ -143,7 +11,7 @@ export class Creature
             @genome = genome
         else
             @genome = new Genome()
-            @genome.cells.set(0, 0, 'CellRoot')
+            @genome.setCell(0, 0, Cells.CellRoot)
             for let i = 0; i < 20; i++
                 @genome.mutate()
         @genome.build(@)
@@ -157,18 +25,18 @@ export class Creature
             if position?
                 x = clamp(..)
                     position.x + random(-50, 50)
-                    padding, WIDTH - padding
+                    padding, game.WIDTH - padding
                 y = clamp(..)
                     position.y + random(-50, 50)
-                    padding, HEIGHT - padding
+                    padding, game.HEIGHT - padding
             else
-                x = random(padding, WIDTH - padding)
-                y = random(padding, HEIGHT - padding)
+                x = random(padding, game.WIDTH - padding)
+                y = random(padding, game.HEIGHT - padding)
             Composite.rotate(@body, random(0, Math.PI * 2), {x: 0, y:0})
             Composite.translate(@body, {x,y})
-            World.add(world, @body)
+            World.add(game.world, @body)
 
-        remove: -> World.remove(world, @body)
+        remove: -> World.remove(game.world, @body)
 
         update: (dt) ->
             for body in Composite.allBodies(@body)
@@ -177,14 +45,14 @@ export class Creature
             for constraint in Composite.allConstraints(@body)
                 let diff = Vector.sub(constraint.bodyA.position, constraint.bodyB.position)
                 let distSq = Vector.magnitudeSquared(diff)
-                if distSq > cellSizeSquared * constraint.lengthFactorSquared * 1.3
+                if distSq > game.cellSizeSquared * constraint.lengthFactorSquared * 1.3
                     Composite.remove(@body, constraint)
 
             @energy -= dt * @@energyLossRate
             if @energy <= 0
                 console.log('STARVED')
                 @die()
-            else if @energy >= 20 and creatures.length < maxCreatures
+            else if @energy >= 20 and game.creatures.length < game.maxCreatures
                 @reproduce()
 
         die: ->
@@ -192,16 +60,15 @@ export class Creature
             for constraint in Composite.allConstraints(@body)
                 Composite.remove(@body, constraint)
             for body in Composite.allBodies(@body)
-                if body.cell.constructor isnt Cell
+                if body.cell.constructor isnt Cells.Cell
                     Composite.remove(@body, body)
 
         reproduce: ->
             @energy -= 10
             let childGenome = ion.deserialize(ion.serialize(@genome), {Genome, Grid})
-            # if Math.random() < 0.5
             childGenome.mutate()
             let child = new Creature(childGenome)
-            creatures.push(child)
+            game.creatures.push(child)
             child.add(Composite.allBodies(@body)[0].position)
 
         constrain: (cellA, cellB, options) ->

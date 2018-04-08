@@ -74,13 +74,13 @@
 <script src='node_modules/ion/lib/test/reactiveTemplates.js'></script>
 <script src='node_modules/ion/lib/test/sourceSize.js'></script>
 <script src='node_modules/ion/lib/test/syntax.js'></script>
+<script src='lib/Cells.js'></script>
 <script src='lib/Common.js'></script>
 <script src='lib/Creature.js'></script>
+<script src='lib/Game.js'></script>
+<script src='lib/Genome.js'></script>
 <script src='lib/Matter.js'></script>
 <script src='lib/index.js'></script>
-<script src='lib/main.js'></script>
-<script src='lib/Genome.js'></script>
-<script src='lib/Cells.js'></script>
     <title>Petri Dish</title>
 </head>
 
@@ -88,8 +88,10 @@
     <script type='ion'>
             const
                 petridish = import 'petridish'
-                {main} = petridish
-            main()
+                {Game} = petridish
+            let game = new Game()
+            window.game = game
+            game.run()
         </script>
 </body>
 
