@@ -12,11 +12,12 @@ export class Creature
         else
             @genome = new Genome()
             @genome.setCell(0, 0, Cells.CellRoot)
-            for let i = 0; i < 20; i++
+            for let i = 0; i < game.startingMutations; i++
                 @genome.mutate()
         @genome.build(@)
         @dead = false
         @energy = 10
+        @age = 0
     # energyLossRate: 0.0006
     properties:
         add: (position) ->
@@ -24,10 +25,10 @@ export class Creature
             let x, y
             if position?
                 x = clamp(..)
-                    position.x + random(-100, 100)
+                    position.x + random(-200, 200)
                     padding, game.WIDTH - padding
                 y = clamp(..)
-                    position.y + random(-100, 100)
+                    position.y + random(-200, 200)
                     padding, game.HEIGHT - padding
             else
                 x = random(padding, game.WIDTH - padding)
@@ -53,10 +54,15 @@ export class Creature
 
             @energy -= dt * game.energyLossRate
             if @energy <= 0
-                console.log('STARVED')
+                console.log('STARVATION')
                 @die()
             else if @energy >= 20 and game.creatures.length < game.maxCreatures
                 @reproduce()
+
+            @age += dt
+            if @age > game.maxAge
+                console.log('OLD AGE')
+                @die()
 
         die: ->
             @dead = true

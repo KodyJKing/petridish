@@ -6,8 +6,11 @@ const
 export class Game
     properties:
         run: ->
-            @WIDTH = window.innerWidth
-            @HEIGHT = window.innerHeight
+            # @WIDTH = window.innerWidth
+            # @HEIGHT = window.innerHeight
+            @WIDTH = 1000
+            @HEIGHT = 1000
+
 
             @engine = Engine.create()
             @world = @engine.world
@@ -28,8 +31,10 @@ export class Game
             @world.gravity.y = 0
             @cellSize = 8
             @cellSizeSquared = @cellSize * @cellSize
-            @maxCreatures = 60
+            @maxCreatures = 20
             @energyLossRate = 0.0006
+            @maxAge = 60 * 1000 # One minute
+            @startingMutations = 50
 
             Engine.run(@engine)
             Render.run(@render)

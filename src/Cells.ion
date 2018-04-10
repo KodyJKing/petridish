@@ -17,7 +17,8 @@ export const
         weight: 5
         color: '#F8F8F2'
         density: 1
-        strength: 1.2
+        # strength: 1.2
+        strength: 1.1
         properties:
             edible: true
             remove: ->
@@ -30,7 +31,9 @@ export const
         weight: 0
         color: '#FFE792'
         properties:
-            onRemove: -> @creature.die()
+            onRemove: ->
+                console.log('ROOT CELL LOSS')
+                @creature.die()
 
     class CellMouth extends Cell
         weight: 2
@@ -69,7 +72,8 @@ export const
     class CellThruster extends Cell
         weight: 1
         color: '#FD971F'
-        thrust: 0.0000001
+        # thrust: 0.0000001
+        thrust: 0.0000002
         # thrust: 0.000000075
         properties:
             update: (dt) ->
