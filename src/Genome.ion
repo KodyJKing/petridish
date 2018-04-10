@@ -62,3 +62,4 @@ export class Genome
                                             x: dx * game.cellSize * -0.5
                                             y: dy * game.cellSize * -0.5
                                 constraint.lengthFactorSquared = dx * dx + dy * dy
+                                constraint.strength = cell.constructor.strength * neighbor.constructor.strength

@@ -28,7 +28,8 @@ export class Game
             @world.gravity.y = 0
             @cellSize = 8
             @cellSizeSquared = @cellSize * @cellSize
-            @maxCreatures = 50
+            @maxCreatures = 60
+            @energyLossRate = 0.0006
 
             Engine.run(@engine)
             Render.run(@render)
@@ -60,18 +61,24 @@ export class Game
 
             # Notify cells of collisions
             Events.on(..)
-                @engine, "collisionStart"
+                @engine, "collisionActive"
                 (e) ->
                     for pair in e.pairs
+                        # console.log(pair)
+                        # debugger
                         pair.bodyA.cell?.collide?(pair.bodyB)
                         pair.bodyB.cell?.collide?(pair.bodyA)
 
             # Creatures
             @creatures = []
-            for let i = 0; i < @maxCreatures; i++
-                let creature = new Creature()
-                @creatures.push(creature)
-                creature.add()
+
+            let spawn = =>
+                for let i = 0; i < @maxCreatures; i++
+                    let creature = new Creature()
+                    @creatures.push(creature)
+                    creature.add()
+
+            spawn()
 
             #  Main loop
             let previousTime = performance.now()
@@ -93,3 +100,7 @@ export class Game
 
                     for creature in dead
                         @creatures.remove(creature)
+
+                    if @creatures.length is 0
+                        console.log('EXTINCTION')
+                        spawn()
